@@ -1,0 +1,32 @@
+# Use the official Node.js 20 image as the base
+FROM node:20
+
+# Install Docker CLI
+RUN apt-get update && \
+    apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json (if they exist)
+COPY package*.json ./
+
+# Install Node.js dependencies
+RUN npm install https://github.com/MichaelBuhler/ao-localnet.git
+RUN npx ao-localnet configure     # generate wallets and download AOS module
+RUN npx ao-localnet start         # run Docker containers (build them if necessary)
+RUN npx ao-localnet seed          # seed AOS and Scheduler info into the localnet
+
+# Copy the rest of the application code
+COPY . .
